@@ -13,7 +13,6 @@ JSON_PATH = os.getenv("json_path")
 
 
 def get_cities(country_code: str) -> pd.DataFrame:
-    """Đọc file JSON và lấy danh sách city theo country_code"""
     with open(JSON_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -22,7 +21,6 @@ def get_cities(country_code: str) -> pd.DataFrame:
 
 
 def send_weather(producer: KafkaProducer, city: str, country: str, topic: str):
-    """Gọi API thời tiết và gửi dữ liệu vào Kafka"""
     params = {
         "q": f"{city},{country}",
         "appid": API_KEY,
@@ -34,13 +32,13 @@ def send_weather(producer: KafkaProducer, city: str, country: str, topic: str):
         response.raise_for_status()
 
         data = response.json()
-        print(f"✅ Dữ liệu API cho {city},{country}: {data}")
+        print(f"---------Extracted data from {city},{country}: {data}----------")
 
         producer.send(topic, value=data).get(timeout=10)
-        print(f"📤 Sent {city},{country} to topic {topic}")
+        print(f"-----------Sending data from {city},{country} to {topic}-----------")
 
     except Exception as e:
-        print(f"❌ Failed {city},{country}: {e}")
+        print(f"---------Error occurred: {e}------------")
 
 # Kafka Producer
 producer = KafkaProducer(
@@ -50,15 +48,11 @@ producer = KafkaProducer(
     metadata_max_age_ms=30000,
     max_block_ms=15000
 )
-
-# Lấy city VN & Lào
+# Lấy danh sách thành phố
 vn_cities = get_cities("VN")
 laos_cities = get_cities("LA")
 
-print("VN Cities:", vn_cities)
-print("LAOS Cities:", laos_cities)
-
-# Gửi weather cho Viet Nam
+# Gửi dữ liệu thời tiết đến  cho topic vietnam
 for city_name in vn_cities["name"]:
     send_weather(producer, city_name, "VN", "vietnam")
 

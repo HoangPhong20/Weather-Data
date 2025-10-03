@@ -53,21 +53,7 @@ def create_postgresql_schema(connection, cursor,database):
         # Autocommit để drop/create database
         connection.set_session(autocommit=True)
         cursor.execute("SELECT current_database();")
-        current_db = cursor.fetchone()[0]
-        print(current_db)
-        cursor.execute("SELECT datname FROM pg_database WHERE datistemplate = false;")
-        databases = cursor.fetchall()
-
-        print("Danh sách database trong PostgreSQL:")
-        for db in databases:
-            print(db)
         cursor.execute(f"DROP DATABASE IF EXISTS {database};")
-        cursor.execute("SELECT datname FROM pg_database WHERE datistemplate = false;")
-        databases = cursor.fetchall()
-
-        print("Danh sách database trong PostgreSQL:")
-        for db in databases:
-            print(db)
         cursor.execute(f"CREATE DATABASE {database};")
         print(f"-------Create database: {database} success------------")
 
@@ -75,8 +61,6 @@ def create_postgresql_schema(connection, cursor,database):
         connection.close()
         # Kết nối lại DB mới vì connection ban đầu vẫn gắn với db cũ
         config = get_database_config()
-        print(f"[DEBUG] Reconnecting to DB={database} host={config['postgres'].host}:{config['postgres'].port}")
-
         new_connection = psycopg2.connect(
             host=config["postgres"].host,
             port=config["postgres"].port,
@@ -90,23 +74,16 @@ def create_postgresql_schema(connection, cursor,database):
             sql_commands = [cmd.strip() for cmd in f.read().split(";") if cmd.strip()]
 
         for cmd in sql_commands:
-            print(f"[DEBUG] Executing SQL: {cmd[:80]}...")  # log ngắn gọn (80 ký tự đầu)
             new_cursor.execute(cmd)
 
         new_connection.commit()
         print("---------Executed PostgreSQL command-------------")
-
-        new_cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public';")
-        table = new_cursor.fetchall()
-        print("Tables in public schema:", table)
-        print(f"[DEBUG] Final DB in use: {database}")
-
         return new_connection, new_cursor
 
     except Exception as e:
         if 'new_connection' in locals():
             new_connection.rollback()
-            print("[DEBUG] Rolled back new connection")
+            print("-----------Rolled back new connection-----------")
         raise Exception(f"----------Failed to create PostgreSQL schema: {e} ------------")
 def validate_postgresql_schema(postgre_cursor):
     try:
