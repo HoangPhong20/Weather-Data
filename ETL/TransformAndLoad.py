@@ -72,7 +72,7 @@ df_transformed = df.withColumn(
 spark_config = get_spark_config()
 
 # Hàm foreachBatch ghi MySQL
-def write_to_mysql(batch_df, batch_id):
+def write_to_mysql(batch_df,batch_id):
     batch_df_mysql = batch_df.filter(col("topic") == "vietnam").drop("topic")
     if not batch_df_mysql.rdd.isEmpty():  # kiểm tra rỗng
         batch_df_mysql.write \
@@ -86,7 +86,7 @@ def write_to_mysql(batch_df, batch_id):
             .save()
 
 # Hàm foreachBatch ghi PostgreSQL
-def write_to_postgres(batch_df, batch_id):
+def write_to_postgres(batch_df,batch_id):
     batch_df_postgres = batch_df.filter(col("topic") == "laos").drop("topic")
     if not batch_df_postgres.rdd.isEmpty():
         batch_df_postgres.write \
@@ -99,15 +99,20 @@ def write_to_postgres(batch_df, batch_id):
             .mode("append") \
             .save()
 
-# Ghi dữ liệu đến MySQL và PostgreSQL
+# --- Ghi dữ liệu đến MySQL ---
 mysql_query = df_transformed.writeStream \
     .foreachBatch(write_to_mysql) \
     .outputMode("append") \
+    .queryName("WriteToMySQL") \
+    .option("checkpointLocation", "/tmp/checkpoint/mysql") \
     .start()
 
+# --- Ghi dữ liệu đến PostgreSQL ---
 postgres_query = df_transformed.writeStream \
     .foreachBatch(write_to_postgres) \
     .outputMode("append") \
+    .queryName("WriteToPostgres") \
+    .option("checkpointLocation", "/tmp/checkpoint/postgres") \
     .start()
 
 spark.streams.awaitAnyTermination()
