@@ -1,6 +1,6 @@
 from databases.mysql_connect import MySQLConnect
 from config.database_config import get_database_config
-from databases.schema_manager import create_mysql_schema,validate_mysql_schema,create_postgresql_schema,validate_postgresql_schema
+from databases.schema_manager import create_mysql_schema, validate_mysql_schema, create_postgresql_database, create_postgresql_schema, validate_postgresql_schema
 from databases.postgresql_connect import PostgreSQLConnect
 
 def main(config):
@@ -23,13 +23,15 @@ def main(config):
     #PostgreSQL
     with PostgreSQLConnect(config["postgres"].host,config["postgres"].port,config["postgres"].user,
                            config["postgres"].password,"postgres") as postgres_client:
-        connection, cursor = create_postgresql_schema(postgres_client.connection,postgres_client.cursor,"laos")
+        # tạo db mới
+        create_postgresql_database(postgres_client.cursor,postgres_client.connection,"east_asia")
+        connection, cursor = create_postgresql_schema("east_asia")
         cursor.execute(
             """
             INSERT INTO weather_data (city_name, country, time, temperature, humidity, wind_speed)
             VALUES (%s, %s, %s, %s, %s, %s)
             """,
-            ("Vientiane", "LAOS","2025-08-30 15:00:00", 32.1, 65.0, 2.8)
+            ("Beijing", "China","2025-08-30 15:00:00", 32.1, 65.0, 2.8)
         )
         connection.commit()
         print("------------Inserted data to PostgreSQl------------")

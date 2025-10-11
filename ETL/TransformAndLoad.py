@@ -41,8 +41,9 @@ schema = StructType([
 df_raw = spark.readStream \
     .format("kafka") \
     .option("kafka.bootstrap.servers", "localhost:9092") \
-    .option("subscribe", "vietnam,laos") \
+    .option("subscribe", "southeast_asia,east_asia") \
     .option("startingOffsets", "earliest") \
+    .option("failOnDataLoss", "false") \
     .load()
 
 # Parse JSON và flatten
@@ -61,19 +62,30 @@ df = df_raw.selectExpr("CAST(value AS STRING) as json_str", "topic") \
 # Transform
 df_transformed = df.withColumn(
     "country",
-    when(col("country") == "VN", "VietNam")
+    when(col("country") == "VN", "Vietnam")
     .when(col("country") == "LA", "Laos")
+    .when(col("country") == "TH", "Thailand")
+    .when(col("country") == "KH", "Cambodia")
+    .when(col("country") == "MY", "Malaysia")
+    .when(col("country") == "SG", "Singapore")
+    .when(col("country") == "PH", "Philippines")
+    .when(col("country") == "ID", "Indonesia")
+    .when(col("country") == "CN", "China")
+    .when(col("country") == "JP", "Japan")
+    .when(col("country") == "KR", "South Korea")
+    .when(col("country") == "TW", "Taiwan")
+    .when(col("country") == "HK", "Hong Kong")
+    .when(col("country") == "MO", "Macau")
     .otherwise(col("country"))
 ).withColumn(
     "temperature", round(col("temperature") - 273.15, 2)
 )
-
 # Lấy config DB
 spark_config = get_spark_config()
 
 # Hàm foreachBatch ghi MySQL
 def write_to_mysql(batch_df,batch_id):
-    batch_df_mysql = batch_df.filter(col("topic") == "vietnam").drop("topic")
+    batch_df_mysql = batch_df.filter(col("topic") == "southeast_asia").drop("topic")
     if not batch_df_mysql.rdd.isEmpty():  # kiểm tra rỗng
         batch_df_mysql.write \
             .format("jdbc") \
@@ -87,7 +99,7 @@ def write_to_mysql(batch_df,batch_id):
 
 # Hàm foreachBatch ghi PostgreSQL
 def write_to_postgres(batch_df,batch_id):
-    batch_df_postgres = batch_df.filter(col("topic") == "laos").drop("topic")
+    batch_df_postgres = batch_df.filter(col("topic") == "east_asia").drop("topic")
     if not batch_df_postgres.rdd.isEmpty():
         batch_df_postgres.write \
             .format("jdbc") \

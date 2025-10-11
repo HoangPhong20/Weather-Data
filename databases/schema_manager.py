@@ -9,7 +9,7 @@ MYSQL_FILE_PATH = Path("..\sql\schemaMySQL.sql")
 POSTGRESQL_FILE_PATH = Path("..\sql\schemaPostgre.sql")
 
 def create_mysql_schema(mysql_connection, mysql_cursor):
-    database = "vietnam"
+    database = "southeast_asia"
     mysql_cursor.execute(f"DROP DATABASE IF EXISTS {database}")
     mysql_cursor.execute(f"CREATE DATABASE  {database}")
     mysql_connection.commit()
@@ -47,18 +47,26 @@ def validate_mysql_schema(mysql_cursor):
 
         raise Exception(f"----------MySQL schema validation failed: {e}----------") from e
 
-
-def create_postgresql_schema(connection, cursor,database):
+def create_postgresql_database(cursor, connection, database_name):
     try:
-        # Autocommit để drop/create database
+        # Bật autocommit để CREATE/DROP DATABASE không bị transaction
         connection.set_session(autocommit=True)
-        cursor.execute("SELECT current_database();")
-        cursor.execute(f"DROP DATABASE IF EXISTS {database};")
-        cursor.execute(f"CREATE DATABASE {database};")
-        print(f"-------Create database: {database} success------------")
-
+        # Drop database nếu tồn tại
+        cursor.execute(f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{database_name}';")
+        cursor.execute(f"DROP DATABASE IF EXISTS {database_name};")
+        print(f"DEBUG: Dropped database if exists: {database_name}")
+        # Tạo database mới
+        cursor.execute(f"CREATE DATABASE {database_name};")
+        print(f"DEBUG: Created database: {database_name}")
         cursor.close()
         connection.close()
+        print(f"DEBUG: Database {database_name} ready to connect")
+        return True
+    except Exception as e:
+        raise Exception(f"Failed to create database {database_name}: {e}")
+
+def create_postgresql_schema(database):
+    try:
         # Kết nối lại DB mới vì connection ban đầu vẫn gắn với db cũ
         config = get_database_config()
         new_connection = psycopg2.connect(
@@ -66,9 +74,10 @@ def create_postgresql_schema(connection, cursor,database):
             port=config["postgres"].port,
             user=config["postgres"].user,
             password=config["postgres"].password,
-            database=config["postgres"].database
+            database=database
         )
         new_cursor = new_connection.cursor()
+        print(f"DEBUG: Connected to new database: {database}")
         # Đọc schema và chạy lệnh
         with open(POSTGRESQL_FILE_PATH, "r", encoding="utf-8") as f:
             sql_commands = [cmd.strip() for cmd in f.read().split(";") if cmd.strip()]
