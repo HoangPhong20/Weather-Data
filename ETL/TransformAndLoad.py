@@ -12,10 +12,10 @@ jar = [
 spark_connect = Spark_connect(
     app_name="KafkaWeatherStreamingETL",
     master_url="local[*]",
-    executor_memory="2g",
-    executor_cores=1,
-    driver_memory="2g",
-    num_executors=1,
+    executor_memory="4g",
+    executor_cores=2,
+    driver_memory="4g",
+    num_executors=4,
     jar_packages=jar,
     log_level="INFO"
 )
@@ -42,7 +42,7 @@ df_raw = spark.readStream \
     .format("kafka") \
     .option("kafka.bootstrap.servers", "localhost:9092") \
     .option("subscribe", "southeast_asia,east_asia") \
-    .option("startingOffsets", "earliest") \
+    .option("startingOffsets", "latest") \
     .option("failOnDataLoss", "false") \
     .load()
 
@@ -85,7 +85,7 @@ spark_config = get_spark_config()
 
 # Hàm foreachBatch ghi MySQL
 def write_to_mysql(batch_df,batch_id):
-    batch_df_mysql = batch_df.filter(col("topic") == "southeast_asia").drop("topic")
+    batch_df_mysql = batch_df.filter(col("topic") == "southeast_asia").drop("topic").coalesce(2)
     if not batch_df_mysql.rdd.isEmpty():  # kiểm tra rỗng
         batch_df_mysql.write \
             .format("jdbc") \
@@ -99,7 +99,7 @@ def write_to_mysql(batch_df,batch_id):
 
 # Hàm foreachBatch ghi PostgreSQL
 def write_to_postgres(batch_df,batch_id):
-    batch_df_postgres = batch_df.filter(col("topic") == "east_asia").drop("topic")
+    batch_df_postgres = batch_df.filter(col("topic") == "east_asia").drop("topic").coalesce(2)
     if not batch_df_postgres.rdd.isEmpty():
         batch_df_postgres.write \
             .format("jdbc") \
@@ -117,6 +117,7 @@ mysql_query = df_transformed.writeStream \
     .outputMode("append") \
     .queryName("WriteToMySQL") \
     .option("checkpointLocation", "/tmp/checkpoint/mysql") \
+    .trigger(processingTime="10 seconds") \
     .start()
 
 # --- Ghi dữ liệu đến PostgreSQL ---
@@ -125,6 +126,7 @@ postgres_query = df_transformed.writeStream \
     .outputMode("append") \
     .queryName("WriteToPostgres") \
     .option("checkpointLocation", "/tmp/checkpoint/postgres") \
+    .trigger(processingTime="30 seconds") \
     .start()
 
 spark.streams.awaitAnyTermination()
