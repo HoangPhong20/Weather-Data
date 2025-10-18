@@ -94,6 +94,7 @@ def write_to_mysql(batch_df,batch_id):
             .option("user", spark_config["mysql"]["config"]["user"]) \
             .option("password", spark_config["mysql"]["config"]["password"]) \
             .option("driver", "com.mysql.cj.jdbc.Driver") \
+            .option("batchsize", 500) \
             .mode("append") \
             .save()
 
@@ -108,6 +109,7 @@ def write_to_postgres(batch_df,batch_id):
             .option("user", spark_config["postgres"]["config"]["user"]) \
             .option("password", spark_config["postgres"]["config"]["password"]) \
             .option("driver", "org.postgresql.Driver") \
+            .option("batchsize", 500) \
             .mode("append") \
             .save()
 

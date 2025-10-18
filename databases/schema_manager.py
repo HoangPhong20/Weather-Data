@@ -15,16 +15,13 @@ def create_mysql_schema(mysql_connection, mysql_cursor):
     mysql_connection.commit()
     print(f"---------Create database: {database} success------------")
     mysql_connection.database = database
-
     try:
         with open(MYSQL_FILE_PATH,"r") as f:
             sql_script = f.read()
             sql_commands = [cmd.strip() for cmd in sql_script.split(";") if cmd.strip()]
-
             for cmd in sql_commands:
                 mysql_cursor.execute(cmd)
                 print(f"---------Executed mysql command-------------")
-
         mysql_connection.commit()
     except Error as e:
         mysql_connection.rollback()
@@ -37,7 +34,6 @@ def validate_mysql_schema(mysql_cursor):
         table = [row[0] for row in mysql_cursor.fetchall()] #fetchall sẽ fetch dữ liệu ra từ buffer query rồi xóa
         if "weather_data" not in table:
             raise ValueError("----------Table 'weather_data' does not exist----------")
-
         mysql_cursor.execute("SELECT * FROM weather_data where id = 1")
         user = mysql_cursor.fetchone()
         if not user:
@@ -56,10 +52,9 @@ def create_postgresql_database(cursor, connection, database_name):
         cursor.execute(f"DROP DATABASE IF EXISTS {database_name};")
         # Tạo database mới
         cursor.execute(f"CREATE DATABASE {database_name};")
+        print(f"---------Create database: {database_name} success------------")
         cursor.close()
         connection.close()
-        print(f"Database {database_name} ready to connect")
-        return True
     except Exception as e:
         raise Exception(f"Failed to create database {database_name}: {e}")
 
@@ -95,14 +90,11 @@ def validate_postgresql_schema(postgre_cursor):
     try:
         postgre_cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
         table = [row[0] for row in postgre_cursor.fetchall()]
-        print("Tables:", table)
-
         if "weather_data" not in table:
             raise ValueError("----------Table 'weather_data' does not exist-----------")
 
         postgre_cursor.execute("SELECT * FROM weather_data WHERE id = 1")
         user = postgre_cursor.fetchone()
-        print("Sample row:", user)
         if not user:
             raise ValueError("----------No data found with id = 1-------------")
         print("-----------PostgreSQL schema validation successful-------------")
