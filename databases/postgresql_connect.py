@@ -27,7 +27,7 @@ class PostgreSQLConnect:
             return self.connection, self.cursor
         except Error as e:
             if "does not exist" in str(e):
-                print(f"[WARN] Database {self.database} chưa tồn tại. Kết nối tạm vào postgres...")
+                print(f"Database does not exist. Connecting to default 'postgres' database")
                 self.config["database"] = "postgres"
                 self.connection = psycopg2.connect(**self.config)
                 self.cursor = self.connection.cursor()
